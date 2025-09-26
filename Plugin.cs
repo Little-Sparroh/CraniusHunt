@@ -141,6 +141,11 @@ namespace CraniusMissionMod
                 PlayerData.Instance.SetFlag("cranius", 1);
                 //Debug.Log("CraniusMissionMod: Set cranius flag to 1 for testing visibility.");
             }
+            if (PlayerData.Instance.GetFlag("cranius") != 1)
+            {
+                PlayerData.Instance.SetFlag("cranius", 1);
+                //Debug.Log("CraniusMissionMod: Set cranius flag to 1 for testing visibility.");
+            }
         }
     }
 
