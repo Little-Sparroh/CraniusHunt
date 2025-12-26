@@ -1,21 +1,24 @@
 ﻿using BepInEx;
+using BepInEx.Logging;
 using HarmonyLib;
-using Pigeon.Math;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace CraniusMissionMod
+[BepInPlugin(PluginGUID, PluginName, PluginVersion)]
+public class SparrohPlugin : BaseUnityPlugin
 {
-    [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
-    public class CraniusMissionMod : BaseUnityPlugin
-    {
-        public const string PluginGUID = "sparroh.craniushunt";
-        public const string PluginName = "CraniusHunt";
-        public const string PluginVersion = "1.0.2";
+    public const string PluginGUID = "sparroh.craniushunt";
+    public const string PluginName = "CraniusHunt";
+    public const string PluginVersion = "1.0.3";
 
-        private void Awake()
+    public static ManualLogSource Logger;
+
+    private void Awake()
+    {
+        Logger = base.Logger;
+        try
         {
             var harmony = new Harmony(PluginGUID);
             harmony.PatchAll(typeof(MissionSelectWindowInitPatch));
@@ -23,31 +26,48 @@ namespace CraniusMissionMod
             harmony.PatchAll(typeof(MissionSelectWindowPatch));
             Logger.LogInfo($"{PluginName} loaded successfully.");
         }
-    }
-
-    public class CraniusMission : AmalgamationMission
-    {
-        public override bool CanShowInMissionSelect(out bool showLocked, out string lockedMessage)
+        catch (Exception ex)
         {
-            showLocked = false;
-            lockedMessage = null;
-            return true;
+            Logger.LogError($"Failed to initialize {PluginName}: {ex}");
         }
     }
+}
 
-    [HarmonyPatch(typeof(MissionSelectWindow), "Awake")]
-    public class MissionSelectWindowInitPatch
+public class CraniusMission : AmalgamationMission
+{
+    public override bool CanShowInMissionSelect(out bool showLocked, out string lockedMessage)
     {
-        public static CraniusMission craniusMission;
-        public static EnemyClass craniusClass;
+        showLocked = false;
+        lockedMessage = null;
+        return true;
+    }
+}
 
-        [HarmonyPostfix]
-        public static void Postfix(MissionSelectWindow __instance)
+[HarmonyPatch(typeof(MissionSelectWindow), "Awake")]
+public class MissionSelectWindowInitPatch
+{
+    public static CraniusMission craniusMission;
+    public static EnemyClass craniusClass;
+
+    [HarmonyPostfix]
+    public static void Postfix(MissionSelectWindow __instance)
+    {
+        try
         {
-            AmalgamationMission original = Resources.FindObjectsOfTypeAll<AmalgamationMission>()[0];
+            AmalgamationMission original = null;
+            foreach (Mission m in Global.Instance.Missions)
+            {
+                if (m is AmalgamationMission am)
+                {
+                    original = am;
+                    break;
+                }
+            }
             if (original == null)
             {
-                return;
+                original = ScriptableObject.CreateInstance<AmalgamationMission>();
+                original.MissionIcon = Global.Instance.Missions[0].MissionIcon;
+                original.MissionColor = Color.magenta;
             }
 
             craniusMission = ScriptableObject.CreateInstance<CraniusMission>();
@@ -77,8 +97,7 @@ namespace CraniusMissionMod
             craniusMission.ShowInReplayMenu = true;
             craniusMission.Selectable = true;
 
-            EnemyClass[] allEnemyClasses = Resources.FindObjectsOfTypeAll<EnemyClass>();
-            foreach (EnemyClass ec in allEnemyClasses)
+            foreach (EnemyClass ec in Global.Instance.EnemyClasses)
             {
                 if (ec.customSpawner is ScrapBossSpawner)
                 {
@@ -92,13 +111,7 @@ namespace CraniusMissionMod
                 return;
             }
 
-            FieldInfo missionsField = typeof(Global).GetField("Missions", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-            if (missionsField == null)
-            {
-                return;
-            }
-
-            Mission[] missions = (Mission[])missionsField.GetValue(Global.Instance);
+            Mission[] missions = Global.Instance.Missions;
             bool alreadyAdded = false;
             foreach (Mission m in missions)
             {
@@ -114,7 +127,7 @@ namespace CraniusMissionMod
                 Mission[] newMissions = new Mission[missions.Length + 1];
                 Array.Copy(missions, newMissions, missions.Length);
                 newMissions[missions.Length] = craniusMission;
-                missionsField.SetValue(Global.Instance, newMissions);
+                Global.Instance.Missions = newMissions;
             }
 
             if (PlayerData.Instance != null && PlayerData.Instance.GetFlag("cranius") == 0)
@@ -126,13 +139,20 @@ namespace CraniusMissionMod
                 PlayerData.Instance.SetFlag("cranius", 1);
             }
         }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in MissionSelectWindowInitPatch: {ex}");
+        }
     }
+}
 
-    [HarmonyPatch(typeof(AmalgamationObjective), "Setup")]
-    public class AmalgamationObjectivePatch
+[HarmonyPatch(typeof(AmalgamationObjective), "Setup")]
+public class AmalgamationObjectivePatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(AmalgamationObjective __instance)
     {
-        [HarmonyPostfix]
-        public static void Postfix(AmalgamationObjective __instance)
+        try
         {
             if (MissionManager.Instance.Mission is CraniusMission)
             {
@@ -143,15 +163,21 @@ namespace CraniusMissionMod
                 }
             }
         }
-    }
-
-    [HarmonyPatch(typeof(MissionSelectWindow), "ToggleReplayWindow")]
-    public class MissionSelectWindowPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(MissionSelectWindow __instance)
+        catch (Exception ex)
         {
+            SparrohPlugin.Logger.LogError($"Error in AmalgamationObjectivePatch: {ex}");
+        }
+    }
+}
 
+[HarmonyPatch(typeof(MissionSelectWindow), "ToggleReplayWindow")]
+public class MissionSelectWindowPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(MissionSelectWindow __instance)
+    {
+        try
+        {
             if (MissionSelectWindowInitPatch.craniusMission == null)
             {
                 return;
@@ -209,9 +235,17 @@ namespace CraniusMissionMod
                 missionSelectButton.gameObject.SetActive(true);
                 Pigeon.Math.Random random = new Pigeon.Math.Random(Global.MissionSelectSeed + (MissionSelectWindowInitPatch.craniusMission.ID.GetHashCode() + 3173) * 5390921);
                 WorldRegion worldRegion = MissionSelectWindowInitPatch.craniusMission.OverrideRegion() ?? Global.Instance.Regions[random.Next(Global.Instance.Regions.Length)];
-                string sceneName;
-                string scene = (MissionSelectWindowInitPatch.craniusMission.OverrideScene(out sceneName) ? sceneName : worldRegion.SceneNames[random.Next(worldRegion.SceneNames.Length)]);
-                missionSelectButton.Setup(new MissionData(random.Next(), MissionSelectWindowInitPatch.craniusMission, worldRegion, scene, null), __instance, allowInteraction: true);
+                int seed = random.Next();
+                SceneData sceneData;
+                if (MissionSelectWindowInitPatch.craniusMission.OverrideScene(out sceneData, worldRegion, seed))
+                {
+                    missionSelectButton.Setup(new MissionData(seed, MissionSelectWindowInitPatch.craniusMission, worldRegion, sceneData, null, 0), __instance, allowInteraction: true);
+                }
+                else
+                {
+                    SceneData sceneDataFallback = worldRegion.Scenes[random.Next(worldRegion.Scenes.Length)];
+                    missionSelectButton.Setup(new MissionData(seed, MissionSelectWindowInitPatch.craniusMission, worldRegion, sceneDataFallback, null, 0), __instance, allowInteraction: true);
+                }
 
                 RectTransform rect = missionSelectButton.GetComponent<RectTransform>();
                 if (rect != null)
@@ -223,6 +257,10 @@ namespace CraniusMissionMod
                     rect.localScale = Vector3.one * 1.5f;
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in MissionSelectWindowPatch: {ex}");
         }
     }
 }
