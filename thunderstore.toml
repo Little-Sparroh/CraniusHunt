@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Sparroh"
 name = "CraniusHunt"
-description = "Adds a standalone mission for Cranius within the 'Replay Missions' menu."
+description = "Adds a standalone mission for Cranius within the Mission Selection Window."
 websiteUrl = "https://github.com/Little-Sparroh/CraniusHunt"
 containsNsfwContent = false
 

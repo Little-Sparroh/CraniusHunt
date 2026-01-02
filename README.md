@@ -1,10 +1,12 @@
 # CraniusHunt
 
-Adds a standalone mission for hunting the secret boss Cranius within the Replay Missions menu.
+Provides direct access to the hidden Cranius boss fight in MycoPunk.
 
 ## Description
 
-This mod adds a new standalone mission called "cranius_hunt" to the Replay Missions menu in MycoPunk. The mission allows players to hunt the secret boss Cranius in a dedicated encounter based on the Amalgamation mission type.
+This mod converts the standalone Cranius hunt mission to use the game's authentic hidden mission mechanics. Instead of a custom implementation, it now triggers the genuine hidden Cranius encounter that normally requires finding a secret button in the Moldy Tundra region.
+
+The mission appears randomly in different regions on the mission select map and loads the hidden "Tundra1Flat" scene with all the original special effects: fungal mass absorption, upgrade pulls, boss music, and the Scrap Boss fight.
 
 ## Getting Started
 
@@ -37,7 +39,14 @@ dotnet build --configuration Release
 
 ### Usage
 
-Once installed, the mod will automatically load through BepInEx when the game starts. Check the BepInEx console for loading confirmation messages. The Cranius hunt mission will appear in the Replay Missions menu.
+Once installed, the mod will automatically load through BepInEx when the game starts. Check the BepInEx console for loading confirmation messages. The Cranius Hunt mission will appear randomly in different regions on the mission select map.
+
+Select the "Cranius Hunt" mission to start the authentic hidden boss fight with:
+- Transportation to the hidden "Tundra1Flat" scene
+- Fungal mass absorption sequence
+- Upgrade pulls from the environment
+- Cranius boss music and effects
+- Scrap Boss encounter with special mechanics
 
 ### Project Structure
 
